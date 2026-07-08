@@ -20,7 +20,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 
-import { loadAdvisorConfig } from "./src/config.ts";
+import { loadAdvisorConfig, advisorShouldBeActive } from "./src/config.ts";
 import { createAdvisorState } from "./src/state.ts";
 import { buildExecutorAdvisorGuidance } from "./src/prompt.ts";
 import { isStateChangingToolCall } from "./src/stage.ts";
@@ -35,42 +35,55 @@ export default function advisorExtension(pi: ExtensionAPI) {
   // Models available to the advisor, captured at session start for `/advisor on` completion.
   const availableModels: string[] = [];
 
+  /**
+   * Add or remove the `advisor` tool from the active set based on whether it should be
+   * active. `pi.registerTool` auto-activates newly registered tools, so we must explicitly
+   * remove `advisor` when it should be off. It is off when disabled, and also when the
+   * advisor model equals the current executor model (consulting yourself is pointless).
+   * Returns whether the tool is now active.
+   */
+  function syncAdvisorToolActive(model: { provider: string; id: string } | undefined): boolean {
+    const want = advisorShouldBeActive(config, model);
+    const active = pi.getActiveTools();
+    if (want && !active.includes("advisor")) pi.setActiveTools([...active, "advisor"]);
+    else if (!want && active.includes("advisor")) pi.setActiveTools(active.filter((t) => t !== "advisor"));
+    return want;
+  }
+
   // --- /advisor command ---
   pi.registerCommand(
     "advisor",
-    createAdvisorCommand({ pi, config, state, runAdvisorCall, getModels: () => availableModels }),
+    createAdvisorCommand({
+      pi,
+      config,
+      state,
+      runAdvisorCall,
+      getModels: () => availableModels,
+      syncToolActive: syncAdvisorToolActive,
+    }),
   );
-
-  // --- Keep the tool active/enabled in sync with config across sessions ---
-  function ensureAdvisorActive(): void {
-    if (!config.enabled) return;
-    const active = pi.getActiveTools();
-    if (!active.includes("advisor")) {
-      pi.setActiveTools([...active, "advisor"]);
-    }
-  }
 
   pi.on("session_start", (_event, ctx) => {
     availableModels.length = 0;
     for (const m of ctx.modelRegistry.getAvailable()) {
       availableModels.push(`${m.provider}/${m.id}`);
     }
-    ensureAdvisorActive();
+    syncAdvisorToolActive(ctx.model);
   });
 
   // --- Per-run reset + executor prompt injection ---
-  pi.on("before_agent_start", async (event) => {
+  pi.on("before_agent_start", async (event, ctx) => {
     state.startRun();
-    if (!config.enabled) return undefined;
-    ensureAdvisorActive();
+    const want = syncAdvisorToolActive(ctx.model);
+    if (!want) return undefined;
     return {
       systemPrompt: `${event.systemPrompt}\n\n${buildExecutorAdvisorGuidance(config)}`,
     };
   });
 
   // --- Track mutations, advisor calls, and the optional strict gate ---
-  pi.on("tool_call", (event) => {
-    if (!config.enabled) return;
+  pi.on("tool_call", (event, ctx) => {
+    if (!advisorShouldBeActive(config, ctx?.model)) return;
 
     if (event.toolName === "advisor") {
       state.markAdvisorCalled();

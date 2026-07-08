@@ -14,7 +14,7 @@
 
 import { BorderedLoader, type ExtensionAPI, type ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import type { AdvisorConfig } from "./config.ts";
-import { applyConfigAssignment, formatConfig, parseProviderModel, persistConfig } from "./config.ts";
+import { advisorShouldBeActive, applyConfigAssignment, formatConfig, parseProviderModel, persistConfig } from "./config.ts";
 import type { AdvisorState } from "./state.ts";
 import type { AdvisorCallOutcome, RunAdvisorCall } from "./tool.ts";
 import type { AutocompleteItem } from "@earendil-works/pi-tui";
@@ -29,6 +29,8 @@ export type AdvisorCommandDeps = {
   runAdvisorCall: RunAdvisorCall;
   /** Available advisor models as `provider/id`, captured at session start for `/advisor on` completion. */
   getModels?: () => string[];
+  /** Add/remove the advisor tool from the active set; returns whether it is now active. */
+  syncToolActive?: (model: { provider: string; id: string } | undefined) => boolean;
 };
 
 const SUBCOMMANDS: ReadonlyArray<{ value: string; label: string; description: string }> = [
@@ -169,12 +171,18 @@ function formatHistory(state: AdvisorState): string {
     .join("\n");
 }
 
-function handleStatus(deps: AdvisorCommandDeps, _ctx: ExtensionCommandContext): CommandResult {
+function handleStatus(deps: AdvisorCommandDeps, ctx: ExtensionCommandContext): CommandResult {
   const { config, state } = deps;
+  const active = advisorShouldBeActive(config, ctx.model);
+  const stateLine = config.enabled
+    ? active
+      ? "enabled"
+      : "enabled (inactive: advisor model == current model)"
+    : "disabled";
   return {
     kind: "info",
     text: [
-      `Advisor: ${config.enabled ? "enabled" : "disabled"}`,
+      `Advisor: ${stateLine}`,
       `Backend: ${config.mode}`,
       `Model: ${config.provider}/${config.model}`,
       `Reasoning: ${config.reasoning}`,
@@ -189,8 +197,8 @@ function handleStatus(deps: AdvisorCommandDeps, _ctx: ExtensionCommandContext): 
   };
 }
 
-function handleOn(deps: AdvisorCommandDeps, _ctx: ExtensionCommandContext, arg: string): CommandResult {
-  const { config, pi } = deps;
+function handleOn(deps: AdvisorCommandDeps, ctx: ExtensionCommandContext, arg: string): CommandResult {
+  const { config, syncToolActive } = deps;
   config.enabled = true;
   if (arg.trim()) {
     const ref = parseProviderModel(arg.trim());
@@ -204,10 +212,14 @@ function handleOn(deps: AdvisorCommandDeps, _ctx: ExtensionCommandContext, arg: 
     config.model = ref.model;
   }
   persistConfig(config);
-  // Make sure the advisor tool is active alongside the built-in tools.
-  const active = pi.getActiveTools();
-  if (!active.includes("advisor")) {
-    pi.setActiveTools([...active, "advisor"]);
+  const active = syncToolActive ? syncToolActive(ctx.model) : true;
+  if (!active) {
+    return {
+      kind: "warning",
+      text:
+        `Advisor enabled but inactive: advisor model ${config.provider}/${config.model} ` +
+        `equals the current model. Switch the executor model or /advisor on <other-model> to activate.`,
+    };
   }
   return {
     kind: "info",
@@ -215,15 +227,12 @@ function handleOn(deps: AdvisorCommandDeps, _ctx: ExtensionCommandContext, arg: 
   };
 }
 
-function handleOff(deps: AdvisorCommandDeps, _ctx: ExtensionCommandContext): CommandResult {
-  const { config, pi } = deps;
+function handleOff(deps: AdvisorCommandDeps, ctx: ExtensionCommandContext): CommandResult {
+  const { config, syncToolActive } = deps;
   config.enabled = false;
   persistConfig(config);
-  // Leave the tool registered but deactivate it so it leaves the system prompt.
-  const active = pi.getActiveTools();
-  if (active.includes("advisor")) {
-    pi.setActiveTools(active.filter((t) => t !== "advisor"));
-  }
+  // Deactivate the tool so it leaves the system prompt.
+  syncToolActive?.(ctx.model);
   return { kind: "info", text: "Advisor disabled. The advisor() tool is now inactive." };
 }
 

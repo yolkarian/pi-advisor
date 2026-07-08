@@ -250,5 +250,19 @@ export function persistConfig(cfg: AdvisorConfig): void {
   saveAdvisorConfig(cfg);
 }
 
+/**
+ * Whether the advisor should be active right now. It is inactive when disabled, and
+ * also when the advisor model is the same as the current executor model — consulting
+ * yourself as the advisor is pointless, so we auto-deactivate in that case.
+ */
+export function advisorShouldBeActive(
+  config: AdvisorConfig,
+  model: { provider: string; id: string } | undefined,
+): boolean {
+  if (!config.enabled) return false;
+  if (model && model.provider === config.provider && model.id === config.model) return false;
+  return true;
+}
+
 /** Re-export for modules that need the agent dir (e.g. transcript cwd display). */
 export { getAgentDir, type ExtensionAPI };
