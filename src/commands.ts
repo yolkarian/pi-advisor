@@ -93,7 +93,7 @@ function handleOn(deps: AdvisorCommandDeps, _ctx: ExtensionCommandContext, arg: 
     if (!ref) {
       return {
         kind: "warning",
-        text: `Invalid provider/model "${arg.trim()}". Expected form like anthropic/claude-opus-4-1.`,
+        text: `Invalid provider/model "${arg.trim()}". Expected form like openai-codex/gpt-5.5.`,
       };
     }
     config.provider = ref.provider;

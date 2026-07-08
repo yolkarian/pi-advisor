@@ -58,9 +58,9 @@ created with defaults on first use and edited via `/advisor config` or by hand.
 ```json
 {
   "enabled": false,
-  "provider": "anthropic",
-  "model": "claude-opus-4-1",
-  "reasoning": "high",
+  "provider": "openai-codex",
+  "model": "gpt-5.5",
+  "reasoning": "xhigh",
   "maxUsesPerRun": 3,
   "maxContextMessages": 24,
   "maxAdvisorOutputTokens": 1200,
@@ -69,7 +69,7 @@ created with defaults on first use and edited via `/advisor config` or by hand.
   "mode": "pi-ai",
   "externalCli": {
     "enabled": false,
-    "command": "claude",
+    "command": "pi",
     "args": [],
     "resume": true
   }
@@ -79,16 +79,16 @@ created with defaults on first use and edited via `/advisor config` or by hand.
 | Key | Default | Description |
 |-----|---------|-------------|
 | `enabled` | `false` | Master switch. When off, the tool is inactive and no prompt is injected. |
-| `provider` | `"anthropic"` | Advisor model provider. |
-| `model` | `"claude-opus-4-1"` | Advisor model id. Must be a registered model (`pi --list-models`). |
-| `reasoning` | `"high"` | Reasoning effort: `low` / `medium` / `high`. Ignored for non-reasoning models. |
+| `provider` | `"openai-codex"` | Advisor model provider. |
+| `model` | `"gpt-5.5"` | Advisor model id. Must be a registered model (`pi --list-models`). |
+| `reasoning` | `"xhigh"` | Reasoning effort: `minimal` / `low` / `medium` / `high` / `xhigh`. Ignored for non-reasoning models. |
 | `maxUsesPerRun` | `3` | Hard cap on `advisor()` calls per agent run (one user prompt = one run). |
 | `maxContextMessages` | `24` | How many recent session messages to fold into the advisor context. |
 | `maxAdvisorOutputTokens` | `1200` | Max output tokens for one advisor response. |
 | `strictBeforeFirstWrite` | `false` | Block the first state-changing tool call until `advisor()` is called. |
 | `redactSecrets` | `true` | Scrub secrets out of the advisor context before sending. |
 | `mode` | `"pi-ai"` | Backend: `"pi-ai"` (reuse Pi providers/keys) or `"external-cli"` (pipe to a CLI). |
-| `externalCli.command` | `"claude"` | CLI command for the external-cli backend. |
+| `externalCli.command` | `"pi"` | External CLI command; must read the advisor context from stdin and write guidance to stdout. |
 | `externalCli.args` | `[]` | Extra CLI args. |
 | `externalCli.resume` | `true` | Hint the CLI to resume an advisor session across calls. |
 
@@ -169,17 +169,16 @@ single non-streaming completion with no tools.
 
 ### `external-cli`
 
-For users already logged into a CLI (Claude CLI, Codex CLI, …) who do not want a second
-API key in Pi. The extension pipes the curated context to the CLI's stdin and parses
-stdout as the advisor guidance. Usage stats are not available from the CLI, so token
-counts report as zero.
+For users who want the advisor to be a separate process — for example another `pi` invocation, or any CLI that reads a prompt from stdin and writes guidance to stdout — without configuring a second API key in Pi. The extension pipes the curated context to the command's stdin and parses stdout as the advisor guidance. Usage stats are not available from the CLI, so token counts report as zero.
 
 ```json
 {
   "mode": "external-cli",
-  "externalCli": { "enabled": true, "command": "claude", "args": ["--model", "opus"], "resume": true }
+  "externalCli": { "enabled": true, "command": "pi", "args": [], "resume": true }
 }
 ```
+
+Note: the command must consume the advisor context from stdin and emit guidance on stdout. `pi` does not do this with empty args, so configure `args` (or a wrapper) accordingly, or use the default `pi-ai` backend.
 
 ## Security & privacy
 

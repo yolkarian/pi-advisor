@@ -19,12 +19,12 @@ export type AdvisorMode = "pi-ai" | "external-cli";
 export type AdvisorConfig = {
   /** Master switch. When false the tool is a no-op and no prompt is injected. */
   enabled: boolean;
-  /** Advisor model provider, e.g. "anthropic". */
+  /** Advisor model provider, e.g. "openai-codex". */
   provider: string;
-  /** Advisor model id, e.g. "claude-opus-4-1". */
+  /** Advisor model id, e.g. "gpt-5.5". */
   model: string;
   /** Reasoning effort for the advisor call. Ignored for non-reasoning models. */
-  reasoning: "low" | "medium" | "high";
+  reasoning: "minimal" | "low" | "medium" | "high" | "xhigh";
   /** Hard cap on advisor() calls per agent run (one user prompt = one run). */
   maxUsesPerRun: number;
   /** How many recent session messages to fold into the advisor context. */
@@ -49,9 +49,9 @@ export type AdvisorConfig = {
 
 export const DEFAULT_ADVISOR_CONFIG: AdvisorConfig = {
   enabled: false,
-  provider: "anthropic",
-  model: "claude-opus-4-1",
-  reasoning: "high",
+  provider: "openai-codex",
+  model: "gpt-5.5",
+  reasoning: "xhigh",
   maxUsesPerRun: 3,
   maxContextMessages: 24,
   maxAdvisorOutputTokens: 1200,
@@ -60,7 +60,7 @@ export const DEFAULT_ADVISOR_CONFIG: AdvisorConfig = {
   mode: "pi-ai",
   externalCli: {
     enabled: false,
-    command: "claude",
+    command: "pi",
     args: [],
     resume: true,
   },
@@ -72,7 +72,7 @@ function configPath(): string {
   return join(getAgentDir(), CONFIG_FILENAME);
 }
 
-const REASONING_VALUES = new Set(["low", "medium", "high"]);
+const REASONING_VALUES = new Set(["minimal", "low", "medium", "high", "xhigh"]);
 const MODE_VALUES = new Set<AdvisorMode>(["pi-ai", "external-cli"]);
 
 function isNumber(v: unknown): v is number {
@@ -153,7 +153,7 @@ export function saveAdvisorConfig(cfg: AdvisorConfig): void {
 }
 
 /**
- * Parse a `provider/model` argument (as used by `/advisor on anthropic/claude-opus-4-1`)
+ * Parse a `provider/model` argument (as used by `/advisor on openai-codex/gpt-5.5`)
  * into a validated patch. Returns null when the argument is not a valid ref.
  */
 export function parseProviderModel(ref: string): { provider: string; model: string } | null {
@@ -203,7 +203,7 @@ export function applyConfigAssignment(cfg: AdvisorConfig, assignment: string): s
         cfg.reasoning = rawValue as AdvisorConfig["reasoning"];
         return `${key}=${rawValue}`;
       }
-      return `${key} must be one of: low, medium, high`;
+      return `${key} must be one of: minimal, low, medium, high, xhigh`;
     }
     case "mode": {
       if (MODE_VALUES.has(rawValue as AdvisorMode)) {

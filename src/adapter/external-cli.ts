@@ -1,9 +1,11 @@
 /**
  * External CLI advisor backend (optional).
  *
- * For users who are already logged into a CLI such as Claude CLI or Codex CLI and do
- * not want to configure a second API key inside Pi. The extension builds the curated
- * context, pipes it to the CLI's stdin, and parses the advisor output from stdout.
+ * For users who want the advisor to be a separate process — for example another `pi`
+ * invocation, or any CLI that reads a prompt from stdin and writes guidance to
+ * stdout — without configuring a second API key inside Pi. The extension builds the
+ * curated context, pipes it to the command's stdin, and parses the advisor output from
+ * stdout.
  *
  * This backend does not get structured usage back from the CLI, so usage is reported
  * as zero and cost tracking falls back to whatever the CLI prints (ignored here).
