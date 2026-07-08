@@ -16,16 +16,7 @@
   ],
   "files": [
     "index.ts",
-    "config.ts",
-    "state.ts",
-    "prompt.ts",
-    "stage.ts",
-    "redaction.ts",
-    "transcript.ts",
-    "adapter.ts",
-    "external-cli.ts",
-    "render.ts",
-    "commands.ts",
+    "src",
     "README.md",
     "LICENSE"
   ],

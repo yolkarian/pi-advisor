@@ -10,8 +10,8 @@
  */
 
 import { spawn } from "node:child_process";
-import type { AdvisorConfig } from "./config.ts";
-import type { AdvisorResponse } from "./adapter.ts";
+import type { AdvisorConfig } from "../config.ts";
+import type { AdvisorResponse } from "./types.ts";
 
 const CLI_TIMEOUT_MS = 120_000;
 

@@ -9,15 +9,9 @@
 
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { completeSimple, type Message } from "@earendil-works/pi-ai/compat";
-import type { AdvisorConfig } from "./config.ts";
-import type { AdvisorUsage } from "./state.ts";
-
-export type AdvisorResponse = {
-  text: string;
-  usage: AdvisorUsage;
-  elapsedMs: number;
-  model: string;
-};
+import type { AdvisorConfig } from "../config.ts";
+import type { AdvisorUsage } from "../state.ts";
+import type { AdvisorResponse } from "./types.ts";
 
 /**
  * Resolve the configured advisor model and call it with the curated transcript as a

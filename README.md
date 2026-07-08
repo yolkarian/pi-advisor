@@ -207,17 +207,21 @@ Built and tested against Pi `0.80.x` (`@earendil-works/pi-coding-agent`, `@earen
 ## Project layout
 
 ```text
-index.ts        entry point: wires config, state, command, events, tool, renderer
-config.ts       load/save/validate ~/.pi/agent/advisor.json
-state.ts        per-run + per-session state and budget enforcement
-prompt.ts       executor guidance + advisor system prompt
-stage.ts        branch analysis + stage detection (shared with transcript)
-redaction.ts    secret scrubbing + secret-file summarization
-transcript.ts   curated advisor context builder
-adapter.ts      pi-ai backend (completeSimple, no tools)
-external-cli.ts external CLI backend (spawn + stdin/stdout)
-render.ts       compact/expanded TUI rendering for the advisor tool
-commands.ts     /advisor command and subcommands
+index.ts            entry point: wires config, state, command, events, tool, renderer
+src/
+  tool.ts          the advisor() tool + shared advisor-call core (runAdvisorCall)
+  commands.ts      /advisor command and subcommands
+  config.ts        load/save/validate ~/.pi/agent/advisor.json
+  state.ts         per-run + per-session state and budget enforcement
+  prompt.ts        executor guidance + advisor system prompt
+  stage.ts         branch analysis + stage detection (shared with transcript)
+  redaction.ts     secret scrubbing + secret-file summarization
+  transcript.ts    curated advisor context builder
+  render.ts        compact/expanded TUI rendering for the advisor tool
+  adapter/
+    types.ts       shared AdvisorResponse type
+    pi-ai.ts       pi-ai backend (completeSimple, no tools)
+    external-cli.ts external CLI backend (spawn + stdin/stdout)
 ```
 
 ## License

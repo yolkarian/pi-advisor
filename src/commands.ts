@@ -16,19 +16,16 @@ import { BorderedLoader, type ExtensionAPI, type ExtensionCommandContext } from 
 import type { AdvisorConfig } from "./config.ts";
 import { applyConfigAssignment, formatConfig, parseProviderModel, persistConfig } from "./config.ts";
 import type { AdvisorState } from "./state.ts";
-import type { AdvisorToolDetails } from "./render.ts";
+import type { AdvisorCallOutcome, RunAdvisorCall } from "./tool.ts";
 
-export type AdvisorCallOutcome = {
-  text: string;
-  details: AdvisorToolDetails;
-};
+export type { AdvisorCallOutcome };
 
 export type AdvisorCommandDeps = {
   pi: ExtensionAPI;
   config: AdvisorConfig;
   state: AdvisorState;
   /** Build context + call the advisor model. Throws on failure. */
-  runAdvisorCall: (ctx: ExtensionCommandContext, signal: AbortSignal | undefined) => Promise<AdvisorCallOutcome>;
+  runAdvisorCall: RunAdvisorCall;
 };
 
 type ReportKind = "info" | "warning" | "error";

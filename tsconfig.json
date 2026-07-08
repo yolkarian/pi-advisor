@@ -14,6 +14,7 @@
     "types": ["node"]
   },
   "include": [
-    "*.ts"
+    "index.ts",
+    "src/**/*.ts"
   ]
 }
