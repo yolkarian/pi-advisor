@@ -68,10 +68,8 @@ created with defaults on first use and edited via `/advisor config` or by hand.
   "redactSecrets": true,
   "mode": "pi-ai",
   "externalCli": {
-    "enabled": false,
     "command": "pi",
-    "args": [],
-    "resume": true
+    "args": []
   }
 }
 ```
@@ -87,10 +85,9 @@ created with defaults on first use and edited via `/advisor config` or by hand.
 | `maxAdvisorOutputTokens` | `1200` | Max output tokens for one advisor response. |
 | `strictBeforeFirstWrite` | `false` | Block the first state-changing tool call until `advisor()` is called. |
 | `redactSecrets` | `true` | Scrub secrets out of the advisor context before sending. |
-| `mode` | `"pi-ai"` | Backend: `"pi-ai"` (reuse Pi providers/keys) or `"external-cli"` (pipe to a CLI). |
-| `externalCli.command` | `"pi"` | External CLI command; must read the advisor context from stdin and write guidance to stdout. |
-| `externalCli.args` | `[]` | Extra CLI args. |
-| `externalCli.resume` | `true` | Hint the CLI to resume an advisor session across calls. |
+| `mode` | `"pi-ai"` | Backend: `"pi-ai"` (in-process model call, reuses Pi providers/keys) or `"external-cli"` (spawn a tool-less `pi` as the advisor). |
+| `externalCli.command` | `"pi"` | The `pi` binary to spawn as the external advisor. |
+| `externalCli.args` | `[]` | Extra args appended to the pi invocation. |
 
 ## Commands
 
@@ -169,16 +166,16 @@ single non-streaming completion with no tools.
 
 ### `external-cli`
 
-For users who want the advisor to be a separate process — for example another `pi` invocation, or any CLI that reads a prompt from stdin and writes guidance to stdout — without configuring a second API key in Pi. The extension pipes the curated context to the command's stdin and parses stdout as the advisor guidance. Usage stats are not available from the CLI, so token counts report as zero.
+Spawns a separate, tool-less `pi` as the advisor: `pi --no-extensions --no-tools --no-session --mode json -p --model <provider/model> --thinking <reasoning> --system-prompt <advisor prompt> "<curated context>"`. The extension parses the child `pi`'s JSON event stream for the advisor's final text and usage. `--no-tools` keeps the advisor tool-less (it cannot edit files or run commands), and `--no-extensions` prevents this extension from re-loading inside the child pi (which would re-enable the `advisor` tool and recurse). The advisor model/reasoning are the same `provider`/`model`/`reasoning` config as the `pi-ai` backend.
 
 ```json
 {
   "mode": "external-cli",
-  "externalCli": { "enabled": true, "command": "pi", "args": [], "resume": true }
+  "externalCli": { "command": "pi", "args": [] }
 }
 ```
 
-Note: the command must consume the advisor context from stdin and emit guidance on stdout. `pi` does not do this with empty args, so configure `args` (or a wrapper) accordingly, or use the default `pi-ai` backend.
+Because the child runs with `--no-extensions`, only built-in model providers are available to it. For an extension-provided advisor model (e.g. a custom provider), use the default `pi-ai` backend. This backend is opt-in; the default path stays in-process.
 
 ## Security & privacy
 
@@ -220,7 +217,7 @@ src/
   adapter/
     types.ts       shared AdvisorResponse type
     pi-ai.ts       pi-ai backend (completeSimple, no tools)
-    external-cli.ts external CLI backend (spawn + stdin/stdout)
+    external-cli.ts external CLI backend (spawn a tool-less pi, parse JSON output)
 ```
 
 ## License

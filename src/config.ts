@@ -39,11 +39,10 @@ export type AdvisorConfig = {
   mode: AdvisorMode;
   /** External CLI backend settings. Only used when mode === "external-cli". */
   externalCli: {
-    enabled: boolean;
+    /** The `pi` binary to spawn as the external advisor (default "pi"). */
     command: string;
+    /** Extra args appended to the pi invocation. */
     args: string[];
-    /** Include a resume marker so the CLI can keep advisor state between calls. */
-    resume: boolean;
   };
 };
 
@@ -59,10 +58,8 @@ export const DEFAULT_ADVISOR_CONFIG: AdvisorConfig = {
   redactSecrets: true,
   mode: "pi-ai",
   externalCli: {
-    enabled: false,
     command: "pi",
     args: [],
-    resume: true,
   },
 };
 
@@ -110,12 +107,10 @@ function sanitize(raw: Record<string, unknown>): AdvisorConfig {
 
   if (raw.externalCli && typeof raw.externalCli === "object" && !Array.isArray(raw.externalCli)) {
     const cli = raw.externalCli as Record<string, unknown>;
-    if (typeof cli.enabled === "boolean") cfg.externalCli.enabled = cli.enabled;
     if (coerceString(cli.command)) cfg.externalCli.command = cli.command as string;
     if (Array.isArray(cli.args) && cli.args.every((a) => typeof a === "string")) {
       cfg.externalCli.args = cli.args as string[];
     }
-    if (typeof cli.resume === "boolean") cfg.externalCli.resume = cli.resume;
   }
 
   return cfg;
@@ -246,7 +241,6 @@ export function formatConfig(cfg: AdvisorConfig): string {
     `redactSecrets: ${cfg.redactSecrets}`,
     `externalCli.command: ${cfg.externalCli.command}`,
     `externalCli.args: ${cfg.externalCli.args.join(" ") || "(none)"}`,
-    `externalCli.resume: ${cfg.externalCli.resume}`,
   ];
   return lines.join("\n");
 }
