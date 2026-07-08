@@ -17,6 +17,7 @@ import type { AdvisorConfig } from "./config.ts";
 import { applyConfigAssignment, formatConfig, parseProviderModel, persistConfig } from "./config.ts";
 import type { AdvisorState } from "./state.ts";
 import type { AdvisorCallOutcome, RunAdvisorCall } from "./tool.ts";
+import type { AutocompleteItem } from "@earendil-works/pi-tui";
 
 export type { AdvisorCallOutcome };
 
@@ -26,7 +27,110 @@ export type AdvisorCommandDeps = {
   state: AdvisorState;
   /** Build context + call the advisor model. Throws on failure. */
   runAdvisorCall: RunAdvisorCall;
+  /** Available advisor models as `provider/id`, captured at session start for `/advisor on` completion. */
+  getModels?: () => string[];
 };
+
+const SUBCOMMANDS: ReadonlyArray<{ value: string; label: string; description: string }> = [
+  { value: "status", label: "status", description: "show advisor status" },
+  { value: "on", label: "on", description: "enable (optionally set provider/model)" },
+  { value: "off", label: "off", description: "disable" },
+  { value: "config", label: "config", description: "show or set config keys" },
+  { value: "set", label: "set", description: "alias for config" },
+  { value: "ask", label: "ask", description: "run one advisor call now" },
+];
+
+type ConfigKind = "boolean" | "string" | "int" | "enum" | "model" | "provider";
+const CONFIG_KEYS: ReadonlyArray<{ key: string; kind: ConfigKind; values?: string[] }> = [
+  { key: "enabled", kind: "boolean" },
+  { key: "provider", kind: "provider" },
+  { key: "model", kind: "model" },
+  { key: "reasoning", kind: "enum", values: ["minimal", "low", "medium", "high", "xhigh"] },
+  { key: "maxUsesPerRun", kind: "int" },
+  { key: "maxContextMessages", kind: "int" },
+  { key: "maxAdvisorOutputTokens", kind: "int" },
+  { key: "strictBeforeFirstWrite", kind: "boolean" },
+  { key: "redactSecrets", kind: "boolean" },
+  { key: "mode", kind: "enum", values: ["pi-ai", "external-cli"] },
+];
+
+function currentValueString(config: AdvisorConfig, key: string): string {
+  switch (key) {
+    case "enabled": return String(config.enabled);
+    case "provider": return config.provider;
+    case "model": return config.model;
+    case "reasoning": return config.reasoning;
+    case "maxUsesPerRun": return String(config.maxUsesPerRun);
+    case "maxContextMessages": return String(config.maxContextMessages);
+    case "maxAdvisorOutputTokens": return String(config.maxAdvisorOutputTokens);
+    case "strictBeforeFirstWrite": return String(config.strictBeforeFirstWrite);
+    case "redactSecrets": return String(config.redactSecrets);
+    case "mode": return config.mode;
+    default: return "";
+  }
+}
+
+/**
+ * Completion for `/advisor <args>`. `argumentPrefix` is everything after the command
+ * name and the framework replaces that whole span with the chosen item's `value`, so
+ * for multi-token args the returned `value` must be the fully reconstructed args string.
+ */
+function buildAdvisorCompletions(deps: AdvisorCommandDeps, argumentPrefix: string): AutocompleteItem[] | null {
+  const endsWithSpace = /\s$/.test(argumentPrefix);
+  const words = argumentPrefix.trim().split(/\s+/).filter(Boolean);
+  const current = endsWithSpace ? "" : (words[words.length - 1] ?? "");
+  const completed = endsWithSpace ? words : words.slice(0, -1);
+  const { config, getModels } = deps;
+
+  // Subcommand position.
+  if (completed.length === 0) {
+    const items = SUBCOMMANDS.filter((s) => s.value.startsWith(current));
+    return items.length ? items.map((s) => ({ value: s.value, label: s.label, description: s.description })) : null;
+  }
+
+  const sub = completed[0];
+  const prev = completed.slice(1);
+  const join = (...parts: string[]) => parts.filter((p) => p.length > 0).join(" ");
+
+  // /advisor on [provider/model]
+  if (sub === "on") {
+    const models = getModels ? getModels() : [];
+    if (models.length === 0) return null;
+    const items = models.filter((m) => m.startsWith(current)).map((m) => ({ value: join(sub, ...prev, m), label: m }));
+    return items.length ? items : null;
+  }
+
+  // /advisor config|set [key=value]...
+  if (sub === "config" || sub === "set") {
+    const eq = current.indexOf("=");
+    if (eq >= 0) {
+      // Value side: complete the value for the key being typed.
+      const key = current.slice(0, eq);
+      const valPrefix = current.slice(eq + 1);
+      const meta = CONFIG_KEYS.find((k) => k.key === key);
+      if (!meta) return null;
+      let vals: string[] = [];
+      if (meta.kind === "boolean") vals = ["true", "false"];
+      else if (meta.kind === "enum" && meta.values) vals = meta.values;
+      else if (meta.kind === "model") vals = getModels ? getModels() : [];
+      else if (meta.kind === "provider") {
+        const models = getModels ? getModels() : [];
+        vals = [...new Set(models.map((m) => m.split("/")[0] ?? ""))];
+      } else return null; // int/string: no value completion
+      const items = vals.filter((v) => v.startsWith(valPrefix)).map((v) => ({ value: join(sub, ...prev, `${key}=${v}`), label: v }));
+      return items.length ? items : null;
+    }
+    // Key side: complete the config key and append "=".
+    const items = CONFIG_KEYS.filter((k) => k.key.startsWith(current)).map((k) => ({
+      value: join(sub, ...prev, `${k.key}=`),
+      label: k.key,
+      description: `current: ${currentValueString(config, k.key)}`,
+    }));
+    return items.length ? items : null;
+  }
+
+  return null;
+}
 
 type ReportKind = "info" | "warning" | "error";
 type CommandResult = { text: string; kind: ReportKind };
@@ -173,6 +277,8 @@ async function handleAsk(deps: AdvisorCommandDeps, ctx: ExtensionCommandContext)
 export function createAdvisorCommand(deps: AdvisorCommandDeps) {
   return {
     description: "Control the advisor strategy: status | on [provider/model] | off | config [key=value] | ask",
+    getArgumentCompletions: (argumentPrefix: string): AutocompleteItem[] | null =>
+      buildAdvisorCompletions(deps, argumentPrefix),
     handler: async (args: string, ctx: ExtensionCommandContext) => {
       const trimmed = args.trim();
       const space = trimmed.indexOf(" ");

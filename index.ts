@@ -32,8 +32,14 @@ export default function advisorExtension(pi: ExtensionAPI) {
   const state = createAdvisorState();
   const { runAdvisorCall, register: registerAdvisorTool } = createAdvisorTool(pi, config, state);
 
+  // Models available to the advisor, captured at session start for `/advisor on` completion.
+  const availableModels: string[] = [];
+
   // --- /advisor command ---
-  pi.registerCommand("advisor", createAdvisorCommand({ pi, config, state, runAdvisorCall }));
+  pi.registerCommand(
+    "advisor",
+    createAdvisorCommand({ pi, config, state, runAdvisorCall, getModels: () => availableModels }),
+  );
 
   // --- Keep the tool active/enabled in sync with config across sessions ---
   function ensureAdvisorActive(): void {
@@ -44,7 +50,11 @@ export default function advisorExtension(pi: ExtensionAPI) {
     }
   }
 
-  pi.on("session_start", () => {
+  pi.on("session_start", (_event, ctx) => {
+    availableModels.length = 0;
+    for (const m of ctx.modelRegistry.getAvailable()) {
+      availableModels.push(`${m.provider}/${m.id}`);
+    }
     ensureAdvisorActive();
   });
 
