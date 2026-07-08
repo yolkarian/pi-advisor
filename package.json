@@ -1,0 +1,54 @@
+{
+  "name": "pi-advisor",
+  "version": "0.1.0",
+  "description": "Advisor strategy extension for the Pi coding agent: a cheap executor model consults a stronger advisor model at high-leverage moments via a zero-parameter advisor() tool.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./index.ts",
+      "default": "./index.ts"
+    }
+  },
+  "types": "./index.ts",
+  "keywords": [
+    "pi-package",
+    "pi-extension"
+  ],
+  "files": [
+    "index.ts",
+    "config.ts",
+    "state.ts",
+    "prompt.ts",
+    "stage.ts",
+    "redaction.ts",
+    "transcript.ts",
+    "adapter.ts",
+    "external-cli.ts",
+    "render.ts",
+    "commands.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-ai": "0.80.3",
+    "@earendil-works/pi-coding-agent": "0.80.3",
+    "@earendil-works/pi-tui": "0.80.3",
+    "@types/node": "^22.15.3",
+    "typebox": "1.1.38",
+    "typescript": "^5.8.3"
+  }
+}
