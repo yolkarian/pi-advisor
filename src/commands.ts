@@ -205,7 +205,7 @@ function handleOn(deps: AdvisorCommandDeps, ctx: ExtensionCommandContext, arg: s
     if (!ref) {
       return {
         kind: "warning",
-        text: `Invalid provider/model "${arg.trim()}". Expected form like openai-codex/gpt-5.5.`,
+        text: `Invalid provider/model "${arg.trim()}". Expected form like openai-codex/gpt-5.6-sol.`,
       };
     }
     config.provider = ref.provider;

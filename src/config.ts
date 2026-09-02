@@ -21,7 +21,7 @@ export type AdvisorConfig = {
   enabled: boolean;
   /** Advisor model provider, e.g. "openai-codex". */
   provider: string;
-  /** Advisor model id, e.g. "gpt-5.5". */
+  /** Advisor model id, e.g. "gpt-5.6-sol". */
   model: string;
   /** Reasoning effort for the advisor call. Ignored for non-reasoning models. */
   reasoning: "minimal" | "low" | "medium" | "high" | "xhigh";
@@ -49,7 +49,7 @@ export type AdvisorConfig = {
 export const DEFAULT_ADVISOR_CONFIG: AdvisorConfig = {
   enabled: false,
   provider: "openai-codex",
-  model: "gpt-5.5",
+  model: "gpt-5.6-sol",
   reasoning: "xhigh",
   maxUsesPerRun: 3,
   maxContextMessages: 24,
@@ -148,7 +148,7 @@ export function saveAdvisorConfig(cfg: AdvisorConfig): void {
 }
 
 /**
- * Parse a `provider/model` argument (as used by `/advisor on openai-codex/gpt-5.5`)
+ * Parse a `provider/model` argument (as used by `/advisor on openai-codex/gpt-5.6-sol`)
  * into a validated patch. Returns null when the argument is not a valid ref.
  */
 export function parseProviderModel(ref: string): { provider: string; model: string } | null {

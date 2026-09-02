@@ -59,7 +59,7 @@ created with defaults on first use and edited via `/advisor config` or by hand.
 {
   "enabled": false,
   "provider": "openai-codex",
-  "model": "gpt-5.5",
+  "model": "gpt-5.6-sol",
   "reasoning": "xhigh",
   "maxUsesPerRun": 3,
   "maxContextMessages": 24,
@@ -78,7 +78,7 @@ created with defaults on first use and edited via `/advisor config` or by hand.
 |-----|---------|-------------|
 | `enabled` | `false` | Master switch. When off, the tool is inactive and no prompt is injected. |
 | `provider` | `"openai-codex"` | Advisor model provider. |
-| `model` | `"gpt-5.5"` | Advisor model id. Must be a registered model (`pi --list-models`). |
+| `model` | `"gpt-5.6-sol"` | Advisor model id. Must be a registered model (`pi --list-models`). |
 | `reasoning` | `"xhigh"` | Reasoning effort: `minimal` / `low` / `medium` / `high` / `xhigh`. Ignored for non-reasoning models. |
 | `maxUsesPerRun` | `3` | Hard cap on `advisor()` calls per agent run (one user prompt = one run). |
 | `maxContextMessages` | `24` | How many recent session messages to fold into the advisor context. |
